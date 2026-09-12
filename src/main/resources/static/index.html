@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AUREUS - Login</title>
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/api.js"></script>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-box glass-card">
+            <h1>AUREUS</h1>
+            <p style="color: var(--text-muted); margin-bottom: 2rem; font-size: 0.9rem;">The Bedrock of Digital Finance</p>
+            
+            <div id="login-form">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="login-email" class="form-input" placeholder="email@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="login-password" class="form-input" placeholder="••••••••">
+                </div>
+                <button id="login-btn" class="btn btn-primary">Login</button>
+                <p class="switch-auth">New here? <a href="#" id="go-to-register">Register</a></p>
+            </div>
+
+            <div id="register-form" style="display: none;">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="reg-name" class="form-input" placeholder="John Doe">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="reg-email" class="form-input" placeholder="email@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="reg-password" class="form-input" placeholder="••••••••">
+                </div>
+                <div class="form-group" style="display: flex; gap: 1rem;">
+                    <div style="flex: 1;">
+                        <label>Date of Birth</label>
+                        <input type="date" id="reg-dob" class="form-input">
+                    </div>
+                    <div style="flex: 1;">
+                        <label>Gender</label>
+                        <select id="reg-gender" class="form-input" style="cursor: pointer;">
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Country</label>
+                    <select id="reg-country" class="form-input" style="cursor: pointer;">
+                        <option value="India">India</option>
+                        <option value="USA">USA</option>
+                        <option value="UK">UK</option>
+                        <option value="Canada">Canada</option>
+                        <option value="Australia">Australia</option>
+                        <option value="Germany">Germany</option>
+                    </select>
+                </div>
+                <button id="register-btn" class="btn btn-primary">Register</button>
+                <p class="switch-auth">Already have an account? <a href="#" id="go-to-login">Login</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        
+        document.getElementById('go-to-register').addEventListener('click', (e) => {
+            e.preventDefault();
+            loginForm.style.display = 'none';
+            registerForm.style.display = 'block';
+        });
+
+        document.getElementById('go-to-login').addEventListener('click', (e) => {
+            e.preventDefault();
+            registerForm.style.display = 'none';
+            loginForm.style.display = 'block';
+        });
+
+        document.getElementById('login-btn').addEventListener('click', async () => {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const res = await ApiService.login(email, password);
+            if (res && res.success) {
+                ApiService.setToken(res.data); // ✅ Save the token!
+                window.location.href = '/dashboard.html';
+            }
+            else alert(res.message);
+        });
+
+        document.getElementById('register-btn').addEventListener('click', async () => {
+            const name = document.getElementById('reg-name').value;
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const dateOfBirth = document.getElementById('reg-dob').value;
+            const country = document.getElementById('reg-country').value;
+            const gender = document.getElementById('reg-gender').value;
+
+            if(!dateOfBirth) { alert("Please provide your Date of Birth."); return; }
+
+            const res = await ApiService.register(name, email, password, { dateOfBirth, country, gender });
+            if (res && res.success) {
+                alert("Registration successful! Please login.");
+                document.getElementById('go-to-login').click();
+            } else alert(res.message || "Registration failed. Check if you are under 18.");
+        });
+    </script>
+</body>
+</html>

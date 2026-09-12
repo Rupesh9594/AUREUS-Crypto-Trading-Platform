@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AUREUS - Dashboard</title>
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    <link rel="stylesheet" href="css/style.css">
+    <!-- WebSockets -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <!-- Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script src="js/api.js"></script>
+</head>
+<body>
+    <!-- Live Ticker -->
+    <div class="ticker-wrap">
+        <div class="ticker" id="live-ticker-banner">
+            <!-- Populated via JS -->
+            <div class="ticker__item">Connecting to Live Market...</div>
+        </div>
+    </div>
+    
+    <nav class="navbar">
+        <div class="navbar-brand">AUREUS</div>
+        <div class="navbar-user">
+            <img src="https://ui-avatars.com/api/?name=User&background=3b82f6&color=fff" id="nav-profile-img" class="navbar-avatar" alt="Profile">
+            <span id="nav-wallet-balance" class="text-green font-bold">$0.00</span>
+            <button id="logout-btn" class="btn btn-sm">Logout</button>
+        </div>
+    </nav>
+
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar glass-card">
+            <div class="nav-item active" data-target="view-dashboard">Dashboard</div>
+            <div class="nav-item" data-target="view-market">Live Market</div>
+            <div class="nav-item" data-target="view-trade">Trade & Charts</div>
+            <div class="nav-item" data-target="view-wallet">Wallet</div>
+            <div class="nav-item" data-target="view-history">History</div>
+            <div class="nav-item" data-target="view-profile">My Profile</div>
+            <div class="nav-item" data-target="view-social">Social Leaderboard</div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            
+            <!-- Dashboard View -->
+            <section id="view-dashboard" class="view-section active">
+                <h2 style="margin-bottom: 1rem;">Portfolio Overview <span class="live-indicator">LIVE</span></h2>
+                <div class="stats-grid">
+                    <div class="glass-card">
+                        <div class="text-muted">Total Portfolio Value</div>
+                        <div class="stat-value" id="dashboard-total-value">$0.00</div>
+                    </div>
+                    <div class="glass-card">
+                        <div class="text-muted">Total Invested</div>
+                        <div class="stat-value" id="dashboard-total-invested">$0.00</div>
+                    </div>
+                    <div class="glass-card">
+                        <div class="text-muted">Total Profit / Loss</div>
+                        <div class="stat-value" id="dashboard-total-profit">$0.00</div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 2rem; margin-top: 2rem;">
+                    <div class="glass-card" style="flex: 2; padding: 1rem;">
+                        <h3>Your Assets</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Coin</th>
+                                    <th>Quantity</th>
+                                    <th>Avg Buy</th>
+                                    <th>Current LIVE</th>
+                                    <th>Profit/Loss</th>
+                                </tr>
+                            </thead>
+                            <tbody id="portfolio-table-body"></tbody>
+                        </table>
+                    </div>
+                    <div class="glass-card" style="flex: 1; padding: 1rem; text-align: center;">
+                        <h3>Asset Allocation</h3>
+                        <canvas id="portfolioPieChart" width="200" height="200"></canvas>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 2rem; margin-bottom: 1rem;">Your Watchlist ★</h3>
+                <div class="glass-card" style="padding: 1rem;">
+                    <table>
+                        <thead>
+                            <tr><th>Symbol</th><th>Name</th><th>LIVE Price</th><th>Action</th></tr>
+                        </thead>
+                        <tbody id="watchlist-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Market View -->
+            <section id="view-market" class="view-section">
+                <h2 style="margin-bottom: 1rem;">Live Market <span class="live-indicator">LIVE</span></h2>
+                <div class="glass-card" style="padding: 1rem;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Name</th>
+                                <th>Price (USD)</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="market-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Trade View -->
+            <section id="view-trade" class="view-section">
+                <h2 style="margin-bottom: 1rem;">Limit & Market Trading</h2>
+                
+                <div style="display: flex; gap: 2rem;">
+                    <div class="glass-card" style="flex: 1;">
+                        <canvas id="cryptoPriceChart" width="400" height="200"></canvas>
+                        
+                        <div class="crypto-symbol-large" id="trade-symbol-display" style="margin-top:2rem;">BTC</div>
+                        <div class="crypto-price-large" id="trade-price-display">Select via Market</div>
+                        
+                        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                            <button id="tab-market" class="btn btn-sm btn-active" style="flex:1">Market</button>
+                            <button id="tab-limit" class="btn btn-sm" style="flex:1">Limit Order</button>
+                        </div>
+
+                        <!-- Current Holding Info -->
+                        <div id="trade-holding-info" class="glass-card" style="margin-bottom: 1rem; padding: 0.8rem; border: 1px solid var(--accent); display: none;">
+                            <span class="text-muted">You own:</span> 
+                            <span id="trade-holding-qty" class="font-bold">0.00</span> 
+                            <span id="trade-holding-symbol" class="font-bold">BTC</span>
+                            <span id="trade-holding-profit" style="margin-left: 1rem;">$0.00</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Coin Symbol</label>
+                            <select id="trade-symbol" class="form-input" style="cursor:pointer;">
+                                <option value="BTC">BTC</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Quantity</label>
+                            <input type="number" id="trade-qty" class="form-input" placeholder="0.00" step="0.0001" min="0">
+                        </div>
+
+                        <div class="form-group" id="limit-price-group" style="display:none;">
+                            <label>Limit Target Price</label>
+                            <input type="number" id="trade-target" class="form-input" placeholder="0.00" step="0.01">
+                        </div>
+
+                        <div class="action-buttons" style="margin-top: 1rem;">
+                            <button id="btn-buy" class="btn btn-buy">Buy</button>
+                            <button id="btn-sell" class="btn btn-sell">Sell</button>
+                        </div>
+                    </div>
+
+                    <div class="glass-card" style="flex: 1; display: flex; flex-direction: column; gap: 1.5rem;">
+                        <div>
+                            <h3>My Holdings</h3>
+                            <div style="max-height: 250px; overflow-y: auto;">
+                                <table style="margin-top: 1rem;">
+                                    <thead><tr><th>Coin</th><th>Qty</th><th>PnL</th><th>Action</th></tr></thead>
+                                    <tbody id="trade-holdings-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3>Open Limit Orders</h3>
+                            <div style="max-height: 250px; overflow-y: auto;">
+                                <table style="margin-top: 1rem;">
+                                    <thead><tr><th>Type</th><th>Coin</th><th>Qty</th><th>Target</th><th>Action</th></tr></thead>
+                                    <tbody id="open-orders-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Wallet View -->
+            <section id="view-wallet" class="view-section">
+                <h2 style="margin-bottom: 1rem;">Wallet Management</h2>
+                <div class="glass-card" style="max-width: 500px;">
+                    <h3 style="margin-bottom: 1rem;">Available Balance: <span id="wallet-page-balance" class="text-green">$0.00</span></h3>
+                    
+                    <div class="form-group">
+                        <label>Amount (USD)</label>
+                        <input type="number" id="wallet-amount" class="form-input" placeholder="100.00" min="1">
+                    </div>
+                    
+                    <div class="action-buttons" style="margin-top: 1rem;">
+                        <button id="btn-deposit" class="btn btn-primary" style="background-color: var(--accent);">Deposit</button>
+                        <button id="btn-withdraw" class="btn btn-primary" style="background-color: #f59e0b;">Withdraw</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- History View -->
+            <section id="view-history" class="view-section">
+                <h2 style="margin-bottom: 1rem;">Transaction History</h2>
+                <div class="glass-card" style="padding: 1rem;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Coin</th>
+                                <th>Quantity</th>
+                                <th>Price</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Social Leaderboard -->
+            <section id="view-social" class="view-section">
+                <h2 style="margin-bottom: 1rem;">Top Traders Leaderboard 🏆</h2>
+                <div class="glass-card" style="padding: 1rem; max-width: 800px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Trader Name</th>
+                                <th>Total PnL (Profit/Loss)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Profile View -->
+            <section id="view-profile" class="view-section">
+                <div class="profile-header glass-card">
+                    <img src="https://ui-avatars.com/api/?name=User&background=3b82f6&color=fff" id="profile-img-large" class="profile-avatar-large" alt="Profile">
+                    <div>
+                        <h2 id="profile-name-display">User Name</h2>
+                        <p id="profile-email-display" class="text-muted">user@example.com</p>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <div id="profile-tier-badge" class="tier-badge tier-novice">Novice</div>
+                            <div id="profile-kyc-badge" class="tier-badge" style="background: rgba(16, 185, 129, 0.1); color: var(--accent); border: 1px solid var(--accent); display: none;">✓ KYC Verified</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-info-grid">
+                    <div class="glass-card">
+                        <h3>Personal Details</h3>
+                        <div class="form-group" style="margin-top:1rem;">
+                            <label>Full Name</label>
+                            <input type="text" id="prof-name" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label>Bio</label>
+                            <textarea id="prof-bio" class="form-input" style="height: 100px; resize: none;"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Phone Number</label>
+                            <input type="text" id="prof-phone" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label>Profile Photo URL</label>
+                            <input type="text" id="prof-photo-url" class="form-input" placeholder="https://image-link.com">
+                        </div>
+                        <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+                            <div style="flex: 1;">
+                                <label class="text-muted" style="font-size: 0.75rem;">Gender</label>
+                                <select id="prof-gender" class="form-input" style="cursor: pointer;">
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1;">
+                                <label class="text-muted" style="font-size: 0.75rem;">Country</label>
+                                <input type="text" id="prof-country" class="form-input">
+                            </div>
+                        </div>
+                        <button id="btn-save-profile" class="btn btn-primary">Save Changes</button>
+                    </div>
+
+                    <div class="glass-card">
+                        <h3>Account Settings</h3>
+                        <div style="margin-top: 1.5rem;">
+                            <label class="text-muted">Display Theme</label>
+                            <div class="mode-switch" id="theme-toggle" style="margin-top:0.5rem;">
+                                <span id="theme-icon">🌙</span>
+                                <span id="theme-text">Switch to Light Mode</span>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 2rem;">
+                            <h3>Account Stats</h3>
+                            <div style="margin-top: 1rem;">
+                                <p class="text-muted">Member Since: <span id="prof-joined-date" class="text-main">...</span></p>
+                                <p class="text-muted" style="margin-top:0.5rem;">Date of Birth: <span id="prof-dob-text" class="text-main">...</span></p>
+                                <p class="text-muted" style="margin-top:0.5rem;">Portfolio Tier: <span id="prof-tier-text" class="text-main">...</span></p>
+                            </div>
+                        </div>
+
+                        <button id="profile-logout-btn" class="btn btn-sell" style="margin-top: 3rem;">
+                            Logout from Session
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+    
+    <div id="price-flash-overlay"></div>
+
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
